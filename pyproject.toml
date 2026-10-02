@@ -35,6 +35,7 @@ dependencies = [
     # floating `>=` lets the CUDA index (which carries newer builds than the
     # PyPI pin) drag torch 2.9.1 -> 2.13.0, an unvetted bump for mjlab/rsl_rl.
     "torch==2.9.1",
+    "swanlab>=0.10.1",
 ]
 
 [project.entry-points."mjlab.tasks"]
@@ -107,3 +108,8 @@ name = "pytorch-cu129"
 url = "https://download.pytorch.org/whl/cu129"
 # explicit: only packages that name this index resolve from it.
 explicit = true
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+]
