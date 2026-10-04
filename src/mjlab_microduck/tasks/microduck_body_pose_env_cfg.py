@@ -3,7 +3,9 @@ import math
 from dataclasses import dataclass
 
 from mjlab.envs import ManagerBasedRlEnvCfg
-from mjlab.managers import RewardTermCfg
+from mjlab.managers import EventTermCfg, RewardTermCfg
+from mjlab.managers.recorder_manager import RecorderTermCfg
+from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.tasks.velocity.mdp.velocity_command import (
     UniformVelocityCommandCfg,
 )
@@ -13,6 +15,8 @@ from mjlab_microduck.tasks.microduck_velocity_env_cfg import (
     MicroduckRlCfg,
     make_microduck_velocity_env_cfg,
 )
+
+from .body_pose_balance import BalanceTraceRecorder, apply_gui_balance_kick
 
 MicroduckBodyPoseRlCfg = copy.deepcopy(MicroduckRlCfg)
 MicroduckBodyPoseRlCfg.experiment_name = "body_pose"
@@ -27,6 +31,9 @@ class PitchGuiCommand(microduck_mdp.UniformPoseCommand):
         self._manual_checkbox = None
         self._pitch_slider = None
 
+        self._delta_vx_slider = None
+        self._delta_vy_slider = None
+
     def create_gui(
         self,
         name,
@@ -35,7 +42,7 @@ class PitchGuiCommand(microduck_mdp.UniformPoseCommand):
         on_change=None,
         request_action=None,
     ):
-        del get_env_idx, on_change, request_action
+        del on_change, request_action
 
         with server.gui.add_folder("Body pose"):
             self._manual_checkbox = server.gui.add_checkbox(
@@ -49,6 +56,53 @@ class PitchGuiCommand(microduck_mdp.UniformPoseCommand):
                 step=0.5,
                 initial_value=0.0,
             )
+
+        with server.gui.add_folder("Balance test"):
+            self._delta_vx_slider = server.gui.add_slider(
+                "Delta vx (m/s)",
+                min=-1.0,
+                max=1.0,
+                step=0.01,
+                initial_value=0.0,
+            )
+
+            self._delta_vy_slider = server.gui.add_slider(
+                "Delta vy (m/s)",
+                min=-1.0,
+                max=1.0,
+                step=0.01,
+                initial_value=0.0,
+            )
+
+            apply_button = server.gui.add_button("Apply delta v")
+
+            zero_button = server.gui.add_button("Zero sliders")
+
+        @apply_button.on_click
+        def _(_):
+            env_idx = int(get_env_idx())
+
+            delta_vx = float(self._delta_vx_slider.value)
+
+            delta_vy = float(self._delta_vy_slider.value)
+
+            # IMPORTANT:
+            # Do not modify MuJoCo state here.
+            # Only schedule the kick.
+            self._env._pending_balance_kick = (
+                env_idx,
+                delta_vx,
+                delta_vy,
+            )
+
+            print(
+                f"[Balance test] scheduled Δv = ({delta_vx:+.3f}, {delta_vy:+.3f}) m/s"
+            )
+
+        @zero_button.on_click
+        def _(_):
+            self._delta_vx_slider.value = 0.0
+            self._delta_vy_slider.value = 0.0
 
     def _apply_manual_command(self):
         if self._manual_checkbox is None:
@@ -142,4 +196,15 @@ def make_microduck_body_pose_env_cfg(
             zero_command_prob=original_cfg.zero_command_prob,
             debug_vis=original_cfg.debug_vis,
         )
+
+        cfg.events["gui_balance_kick"] = EventTermCfg(
+            func=apply_gui_balance_kick,
+            mode="step",
+        )
+
+        cfg.recorders["balance_trace"] = RecorderTermCfg(
+            func=BalanceTraceRecorder,
+            params={"path": "logs/balance/kick_0.10.npz", "env_idx": 0},
+        )
+
     return cfg
