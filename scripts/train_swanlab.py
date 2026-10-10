@@ -1,7 +1,12 @@
+import os
+
 import swanlab
 
 swanlab.init(
-    project="microduck-standing",
+    project=os.getenv(
+        "MICRODUCK_SWANLAB_PROJECT",
+        "microduck-rl",
+    ),
 )
 
 swanlab.sync_tensorboard_torch()

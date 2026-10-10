@@ -84,6 +84,33 @@ from .microduck_velstand_env_cfg import (
     MicroduckVelStandRlCfg,
     make_microduck_velstand_env_cfg,
 )
+from .microduck_vln_env_cfg import (
+    MicroduckVlnRlCfg,
+    make_microduck_vln_env_cfg,
+)
+from .microduck_vision_env_cfg import (
+    MicroduckVisionRlCfg,
+    make_microduck_vision_env_cfg,
+)
+
+
+# vision task
+register_mjlab_task(
+    task_id="Mjlab-Vision-Flat-MicroDuck",
+    env_cfg=make_microduck_vision_env_cfg(),
+    play_env_cfg=make_microduck_vision_env_cfg(play=True),
+    rl_cfg=MicroduckVisionRlCfg,
+    runner_cls=MicroduckOnPolicyRunner,
+)
+
+# vln task
+register_mjlab_task(
+    task_id="Mjlab-VLN-Flat-MicroDuck",
+    env_cfg=make_microduck_vln_env_cfg(),
+    play_env_cfg=make_microduck_vln_env_cfg(play=True),
+    rl_cfg=MicroduckVlnRlCfg,
+    runner_cls=MicroduckOnPolicyRunner,
+)
 
 # body pose task
 BODY_POSE_NOMINAL_HEIGHT = 0.1163
